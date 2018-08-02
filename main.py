@@ -23,6 +23,7 @@ def getArgs():
 	parser.add_argument("--dir")
 	parser.add_argument("--data_dims", default="rgb")
 	parser.add_argument("--label_dims", default="depth")
+	parser.add_argument("--data_group", default="all")
 
 	# Training stuff
 	parser.add_argument("--batch_size", default=10, type=int)
@@ -92,7 +93,7 @@ def main():
 
 	hvnTransform = "hvn_two_dims" if args.task == "regression" else "identity_long"
 	reader = CitySimReader(args.dataset_path, dataDims=args.data_dims, labelDims=args.label_dims, \
-		hvnTransform=hvnTransform)
+		resizer=(240, 320), hvnTransform=hvnTransform, dataGroup=args.data_group)
 	print(reader.summary())
 
 	if args.type == "test_dataset":

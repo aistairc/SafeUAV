@@ -1,4 +1,5 @@
 import numpy as np
+from Mihlib import npGetInfo
 
 def testDataset(reader, args):
 	generator = reader.iterate("train", miniBatchSize=args.batch_size)
@@ -11,6 +12,7 @@ def testDataset(reader, args):
 		MB = datas.shape[0]
 
 		def hvnPlotter(x, hvnTransform):
+			print(npGetInfo(x))
 			hvn = np.zeros((*x.shape[0 : 2], 3), dtype=np.uint8)
 			if hvnTransform in ("identity_long", "identity"):
 				hvn[np.where(x == 0)] = (255, 0, 0)
@@ -24,22 +26,26 @@ def testDataset(reader, args):
 
 		def plotter(data, dims, hvnTransform, startingIndex, totalItems):
 			j = 0
-			for dim in dims:
+			for i, dim in enumerate(dims):
 				if dim == "rgb":
-					plot_image(data[..., j : j + 3], new_figure=(startingIndex==1 and j==0), show_axis=False, \
-						title="RGB", axis=(1, totalItems, startingIndex + j))
+					rgb = data[..., j : j + 3]
+					print(npGetInfo(rgb))
+					plot_image(rgb, new_figure=(startingIndex==1 and i==0), show_axis=False, \
+						title="RGB", axis=(1, totalItems, startingIndex + i))
 					j += 3
-				if dim == "hvn_gt_p1":
+				elif dim == "hvn_gt_p1":
 					if hvnTransform in ("identity", "identity_long"):
 						hvn = hvnPlotter(data[..., j], hvnTransform)
 					elif hvnTransform == "hvn_two_dims":
 						hvn = hvnPlotter(data[..., j : j + 2], hvnTransform)
-					plot_image(hvn, new_figure=(startingIndex==1 and j==0), show_axis=False, title="HVN", \
-						axis=(1, totalItems, startingIndex + j))
+					plot_image(hvn, new_figure=(startingIndex==1 and i==0), show_axis=False, title="HVN", \
+						axis=(1, totalItems, startingIndex + i))
 					j += 1
-				if dim == "depth":
-					plot_image(data[..., j], cmap="hot", new_figure=(startingIndex==1 and j==0), show_axis=False, \
-						title="Depth", axis=(1, totalItems, startingIndex + j))
+				elif dim == "depth":
+					depth = data[..., j]
+					print(npGetInfo(depth))
+					plot_image(depth, cmap="hot", new_figure=(startingIndex==1 and i==0), show_axis=False, \
+						title="Depth", axis=(1, totalItems, startingIndex + i))
 					j += 1
 			return len(dims)
 
