@@ -2,16 +2,18 @@ import sys
 import os
 import numpy as np
 import torch.optim as optim
+from functools import partial
 from argparse import ArgumentParser
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from neural_wrappers.readers import CitySimReader
 from neural_wrappers.models import ModelUNetDilatedConv
 from neural_wrappers.pytorch import maybeCuda
 from neural_wrappers.callbacks import SaveHistory, SaveModels, Callback, PlotMetricsCallback
+from neural_wrappers.metrics import Accuracy
 
 from unet_tiny_sum import ModelUNetTinySum
 from test_dataset import testDataset
-from loss import l2_loss, classification_loss
+from loss import l2_loss, classification_loss, mIoUMetric, metterMetric
 
 def getArgs():
 	parser = ArgumentParser()
@@ -83,6 +85,22 @@ def setOptimizer(args, model):
 	else:
 		assert False, "%s" % args.optimizer
 
+def getMetrics(args, reader):
+	if args.task == "regression":
+		metterMetricPartial = partial(metterMetric, reader=reader)
+		metrics = {
+			"MSE" : lambda x, y, **k : np.mean( (x - y)**2),
+			"RMSE" : lambda x, y, **k : np.sqrt(np.mean( (x - y)**2)),
+			"L1 Loss" : lambda x, y, **k : np.mean(np.sum(np.abs(x - y), axis=(1, 2))),
+			"Metters" : metterMetricPartial
+		}
+	else:
+		metrics = {
+			"Accuracy" : Accuracy(categoricalLabels=False),
+			"mIoU" : mIoUMetric
+		}
+	return metrics
+
 def changeDirectory(Dir, expectExist):
 	assert os.path.exists(Dir) == expectExist
 	print("Changing to working directory:", Dir)
@@ -106,6 +124,7 @@ def main():
 	setOptimizer(args, model)
 	criterion = l2_loss if args.task == "regression" else classification_loss
 	model.setCriterion(criterion)
+	model.setMetrics(getMetrics(args, reader))
 	print(model.summary())
 
 	generator = reader.iterate("train", miniBatchSize=args.batch_size)
