@@ -61,7 +61,9 @@ class SchedulerCallback(Callback):
 		self.scheduler.step(loss)
 
 def getModel(args, reader):
-	dIn, dOut = reader.getNumDimensions(args.data_dims), reader.getNumDimensions(args.label_dims)
+	dIn = reader.getNumDimensions(args.data_dims)
+	# For classification, we need to output probabilities for all 3 classes.
+	dOut = 3 if args.task == "classification" else reader.getNumDimensions(args.label_dims)
 	if args.model == "unet_big_concatenate":
 		model = ModelUNetDilatedConv(dIn=dIn, dOut=dOut, numFilters=64, bottleneckMode="dilate2_serial_concatenate")
 	elif args.model == "unet_tiny_sum":
