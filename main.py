@@ -33,6 +33,7 @@ def getArgs():
 	parser.add_argument("--optimizer", type=str)
 	parser.add_argument("--learning_rate", type=float)
 	parser.add_argument("--momentum", default=0.9, type=float)
+	parser.add_argument("--factor", default=0.1, type=float)
 	parser.add_argument("--patience", default=4, type=int)
 
 	# Model stuff
@@ -52,8 +53,8 @@ def getArgs():
 	return args
 
 class SchedulerCallback(Callback):
-	def __init__(self, optimizer, patience):
-		self.scheduler = ReduceLROnPlateau(optimizer, "min", factor=0.1, patience=patience, eps=1e-8)
+	def __init__(self, optimizer, factor, patience):
+		self.scheduler = ReduceLROnPlateau(optimizer, "min", factor=factor, patience=patience, eps=1e-8)
 
 	def onEpochEnd(self, **kwargs):
 		if not kwargs["validationMetrics"]:
@@ -136,7 +137,7 @@ def main():
 		changeDirectory(args.dir, expectExist=False)
 
 		callbacks = [SaveModels(type="all"), SaveHistory("history.txt", mode="write"), \
-			PlotMetricsCallback(["Loss"], ["min"]), SchedulerCallback(model.optimizer, args.patience)]
+			PlotMetricsCallback(["Loss"], ["min"]), SchedulerCallback(model.optimizer, args.factor, args.patience)]
 		callbacks[1].file.write(reader.summary())
 		callbacks[1].file.write(model.summary())
 
