@@ -35,3 +35,8 @@ def metterMetric(y_pred_batch, y_true_batch, **kwargs):
 	y_pred_new = y_pred_batch * F
 	y_true_new = y_true_batch * F
 	return np.mean(np.abs(y_pred_new - y_true_new))
+
+def hvnAccuracyMetric(y_pred_batch, y_true_batch, **kwargs):
+	y_pred_batch = np.argmax(y_pred_batch, axis=-1)
+	correct = y_true_batch[..., 0] == y_pred_batch
+	return np.sum(correct) / np.prod(y_pred_batch.shape) * 100

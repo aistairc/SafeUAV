@@ -9,11 +9,9 @@ from neural_wrappers.readers import CitySimReader
 from neural_wrappers.models import ModelUNetDilatedConv
 from neural_wrappers.pytorch import maybeCuda
 from neural_wrappers.callbacks import SaveHistory, SaveModels, Callback, PlotMetricsCallback
-from neural_wrappers.metrics import Accuracy
 
 from unet_tiny_sum import ModelUNetTinySum
-from test_dataset import testDataset
-from loss import l2_loss, classification_loss, mIoUMetric, metterMetric
+from loss import l2_loss, classification_loss, mIoUMetric, metterMetric, hvnAccuracyMetric
 
 def getArgs():
 	parser = ArgumentParser()
@@ -40,15 +38,21 @@ def getArgs():
 	parser.add_argument("--model", type=str)
 	parser.add_argument("--weights_file")
 
+	# Test stuff
+	parser.add_argument("--test_plot_results", default=0, type=int)
+	parser.add_argument("--test_save_results", default=0, type=int)
+
 	args = parser.parse_args()
-	assert args.type in ("test_dataset", "train", "retrain")
+	assert args.type in ("test_dataset", "train", "retrain", "test")
 	assert args.task in ("classification", "regression")
 	if not args.type in ("test_dataset", ):
 		assert args.model in ("unet_big_concatenate", "unet_tiny_sum")
-	if args.type == "retrain":
+	if args.type in ("retrain", "test"):
 		args.weights_file = os.path.abspath(args.weights_file)
 	args.data_dims = args.data_dims.split(",")
 	args.label_dims = args.label_dims.split(",")
+	args.test_save_results = bool(args.test_save_results)
+	args.test_plot_results = bool(args.test_plot_results)
 
 	return args
 
@@ -75,6 +79,9 @@ def getModel(args, reader):
 	return model
 
 def setOptimizer(args, model):
+	if not args.type in ("train", "retrain"):
+		return
+
 	if args.optimizer == "SGD":
 		model.setOptimizer(optim.SGD, lr=args.learning_rate, momentum=args.momentum, nesterov=False)
 	elif args.optimizer == "Nesterov":
@@ -97,7 +104,7 @@ def getMetrics(args, reader):
 		}
 	else:
 		metrics = {
-			"Accuracy" : Accuracy(categoricalLabels=False),
+			"Accuracy" : hvnAccuracyMetric,
 			"mIoU" : mIoUMetric
 		}
 	return metrics
@@ -118,6 +125,7 @@ def main():
 	print(reader.summary())
 
 	if args.type == "test_dataset":
+		from test_dataset import testDataset
 		testDataset(reader, args)
 		sys.exit(0)
 
@@ -151,8 +159,17 @@ def main():
 		model.train()
 		model.train_generator(generator, stepsPerEpoch=steps, numEpochs=args.num_epochs, \
 			callbacks=None, validationGenerator=valGenerator, validationSteps=valSteps)
+	elif args.type == "test":
+		from plotter import PlotCallback
+		if args.test_save_results:
+			changeDirectory(args.dir, expectExist=False)
+		model.loadModel(args.weights_file)
+
+		callbacks = [PlotCallback(args)]
+		metrics = model.test_generator(valGenerator, valSteps, callbacks=callbacks)
+		print(metrics)
 	else:
-		pass
+		assert False, "%s" % args.type
 
 if __name__ == "__main__":
 	main()
