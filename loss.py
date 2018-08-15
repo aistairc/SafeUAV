@@ -14,20 +14,30 @@ def classification_loss(y_pred, y_true):
 	loss = F.nll_loss(y_pred, y_true)
 	return loss
 
-def mIoUMetric(y_pred_batch, y_true_batch, **kwargs):
-	def IoU(y_pred_batch, y_true_batch):
+# Cache the values so they are not computed for all metrics
+TP, TN, FP, FN = None, None, None, None
+def getTPTNFPFN(y_pred_batch, y_true_batch, computeNewValues):
+	global TP, TN, FP, FN
+	if computeNewValues:
 		predTrue = y_pred_batch == True
-		predFalse = y_pred_batch == False
 		labelTrue = y_true_batch == True
+		predFalse = y_pred_batch == False
 		labelFalse = y_true_batch == False
 
-		TP = np.logical_and(predTrue, labelTrue)
-		FP = np.logical_and(predTrue, labelFalse)
-		FN = np.logical_and(predFalse, labelTrue)
+		TP = np.sum(np.logical_and(predTrue, labelTrue))
+		FP = np.sum(np.logical_and(predTrue, labelFalse))
+		FN = np.sum(np.logical_and(predFalse, labelTrue))
+		TN = np.sum(np.logical_and(predFalse, labelFalse))
+	return TP, TN, FP, FN
+
+def mIoUMetric(y_pred_batch, y_true_batch, **kwargs):
+	def IoU(y_pred_batch, y_true_batch):
+		TP, _, FP, FN = getTPTNFPFN(y_pred_batch, y_true_batch, computeNewValues=True)
 		return TP / (TP + FP + FN + 1e-8)
 
 	y_pred_batch = np.argmax(y_pred_batch, axis=-1)
-	res = [IoU((y_pred_batch == i), (y_true_batch == i)[..., 0]) for i in range(3)]
+	y_true_batch = y_true_batch[..., 0]
+	res = [IoU((y_pred_batch == i), (y_true_batch == i)) for i in range(3)]
 	return np.mean(np.array(res))
 
 def metterMetric(y_pred_batch, y_true_batch, **kwargs):
@@ -36,7 +46,32 @@ def metterMetric(y_pred_batch, y_true_batch, **kwargs):
 	y_true_new = y_true_batch * F
 	return np.mean(np.abs(y_pred_new - y_true_new))
 
-def hvnAccuracyMetric(y_pred_batch, y_true_batch, **kwargs):
+def precisionMetric(y_pred_batch, y_true_batch, **kwargs):
+	def precision(y_pred_batch, y_true_batch):
+		TP, _, FP, _ = getTPTNFPFN(y_pred_batch, y_true_batch, computeNewValues=True)
+		return TP / (TP + FP + 1e-8)
+
 	y_pred_batch = np.argmax(y_pred_batch, axis=-1)
-	correct = y_true_batch[..., 0] == y_pred_batch
-	return np.sum(correct) / np.prod(y_pred_batch.shape) * 100
+	y_true_batch = y_true_batch[..., 0]
+	res = [precision((y_pred_batch == i), (y_true_batch == i)) for i in range(3)]
+	return np.mean(np.array(res))
+
+def recallMetric(y_pred_batch, y_true_batch, **kwargs):
+	def recall(y_pred_batch, y_true_batch):
+		TP, _, _, FN = getTPTNFPFN(y_pred_batch, y_true_batch, computeNewValues=True)
+		return TP / (TP + FN + 1e-8)
+
+	y_pred_batch = np.argmax(y_pred_batch, axis=-1)
+	y_true_batch = y_true_batch[..., 0]
+	res = [recall((y_pred_batch == i), (y_true_batch == i)) for i in range(3)]
+	return np.mean(np.array(res))
+
+def accuracyMetric(y_pred_batch, y_true_batch, **kwargs):
+	def recall(y_pred_batch, y_true_batch):
+		TP, TN, FP, FN = getTPTNFPFN(y_pred_batch, y_true_batch, computeNewValues=True)
+		return (TP + TN) / (TP + FP + TN + FN + 1e-8)
+
+	y_pred_batch = np.argmax(y_pred_batch, axis=-1)
+	y_true_batch = y_true_batch[..., 0]
+	res = [recall((y_pred_batch == i), (y_true_batch == i)) for i in range(3)]
+	return np.mean(np.array(res))

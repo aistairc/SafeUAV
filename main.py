@@ -4,6 +4,7 @@ import numpy as np
 import torch.optim as optim
 from functools import partial
 from argparse import ArgumentParser
+from collections import OrderedDict
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from neural_wrappers.readers import CitySimReader
 from neural_wrappers.models import ModelUNetDilatedConv
@@ -11,7 +12,7 @@ from neural_wrappers.pytorch import maybeCuda
 from neural_wrappers.callbacks import SaveHistory, SaveModels, Callback, PlotMetricsCallback
 
 from unet_tiny_sum import ModelUNetTinySum
-from loss import l2_loss, classification_loss, mIoUMetric, metterMetric, hvnAccuracyMetric
+from loss import l2_loss, classification_loss, mIoUMetric, metterMetric, precisionMetric, recallMetric, accuracyMetric
 
 def getArgs():
 	parser = ArgumentParser()
@@ -32,7 +33,7 @@ def getArgs():
 	parser.add_argument("--learning_rate", type=float)
 	parser.add_argument("--momentum", default=0.9, type=float)
 	parser.add_argument("--factor", default=0.1, type=float)
-	parser.add_argument("--patience", default=4, type=int)
+	parser.add_argument("--patience", default=100, type=int)
 
 	# Model stuff
 	parser.add_argument("--model", type=str)
@@ -96,17 +97,19 @@ def setOptimizer(args, model):
 def getMetrics(args, reader):
 	if args.task == "regression":
 		metterMetricPartial = partial(metterMetric, reader=reader)
-		metrics = {
+		metrics = OrderedDict({
 			"MSE" : lambda x, y, **k : np.mean( (x - y)**2),
 			"RMSE" : lambda x, y, **k : np.sqrt(np.mean( (x - y)**2)),
 			"L1 Loss" : lambda x, y, **k : np.mean(np.sum(np.abs(x - y), axis=(1, 2))),
 			"Metters" : metterMetricPartial
-		}
+		})
 	else:
-		metrics = {
-			"Accuracy" : hvnAccuracyMetric,
-			"mIoU" : mIoUMetric
-		}
+		metrics = OrderedDict({
+			"mIoU" : mIoUMetric,
+			"Accuracy" : accuracyMetric,
+			"Precision" : precisionMetric,
+			"Recall" : recallMetric
+		})
 	return metrics
 
 def changeDirectory(Dir, expectExist):
