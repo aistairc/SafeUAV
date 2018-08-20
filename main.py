@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from collections import OrderedDict
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from neural_wrappers.readers import CitySimReader
-from neural_wrappers.models import ModelUNetDilatedConv
+from neural_wrappers.models import ModelUNetDilatedConv, ModelUNet as ModelUNetClassic
 from neural_wrappers.pytorch import maybeCuda
 from neural_wrappers.callbacks import SaveHistory, SaveModels, Callback, PlotMetricsCallback
 
@@ -33,7 +33,7 @@ def getArgs():
 	parser.add_argument("--learning_rate", type=float)
 	parser.add_argument("--momentum", default=0.9, type=float)
 	parser.add_argument("--factor", default=0.1, type=float)
-	parser.add_argument("--patience", default=100, type=int)
+	parser.add_argument("--patience", default=None, type=int)
 
 	# Model stuff
 	parser.add_argument("--model", type=str)
@@ -47,13 +47,15 @@ def getArgs():
 	assert args.type in ("test_dataset", "train", "retrain", "test")
 	assert args.task in ("classification", "regression")
 	if not args.type in ("test_dataset", ):
-		assert args.model in ("unet_big_concatenate", "unet_tiny_sum")
+		assert args.model in ("unet_big_concatenate", "unet_tiny_sum", "unet_classic", "deeplabv3")
 	if args.type in ("retrain", "test"):
 		args.weights_file = os.path.abspath(args.weights_file)
 	args.data_dims = args.data_dims.split(",")
 	args.label_dims = args.label_dims.split(",")
 	args.test_save_results = bool(args.test_save_results)
 	args.test_plot_results = bool(args.test_plot_results)
+	if not args.patience:
+		args.patience = args.num_epochs
 
 	return args
 
@@ -68,6 +70,13 @@ class SchedulerCallback(Callback):
 			loss = kwargs["validationMetrics"]["Loss"]
 		self.scheduler.step(loss)
 
+def getResizer(args):
+	if args.model == "unet_classic":
+		resizer= {"rgb" : (572, 572, 3), "depth" : (388, 388)}
+	else:
+		resizer = (240, 320)
+	return resizer
+
 def getModel(args, reader):
 	dIn = reader.getNumDimensions(args.data_dims)
 	# For classification, we need to output probabilities for all 3 classes.
@@ -76,6 +85,9 @@ def getModel(args, reader):
 		model = ModelUNetDilatedConv(dIn=dIn, dOut=dOut, numFilters=64, bottleneckMode="dilate2_serial_concatenate")
 	elif args.model == "unet_tiny_sum":
 		model = ModelUNetTinySum(dIn=dIn, dOut=dOut, numFilters=16)
+	elif args.model == "unet_classic":
+		assert args.task == "regression" and args.data_dims == ["rgb"] and args.label_dims == ["depth"]
+		model = ModelUNetClassic(dIn=dIn, dOut=dOut, upSampleType="conv_transposed")
 	model = maybeCuda(model)
 	return model
 
@@ -123,8 +135,9 @@ def main():
 	args = getArgs()
 
 	hvnTransform = "hvn_two_dims" if args.task == "regression" else "identity_long"
+	resizer = getResizer(args)
 	reader = CitySimReader(args.dataset_path, dataDims=args.data_dims, labelDims=args.label_dims, \
-		resizer=(240, 320), hvnTransform=hvnTransform, dataGroup=args.data_group)
+		resizer=resizer, hvnTransform=hvnTransform, dataGroup=args.data_group)
 	print(reader.summary())
 
 	if args.type == "test_dataset":

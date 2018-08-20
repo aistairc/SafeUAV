@@ -77,5 +77,6 @@ class PlotCallback(Callback):
 
 		for i in range(len(results)):
 			self.doPlot(data[i], labels[i], results[i])
+			figure_set_size((20, 8))
 			if self.args.test_plot_results:
 				show_plots()
