@@ -12,6 +12,7 @@ from neural_wrappers.pytorch import maybeCuda
 from neural_wrappers.callbacks import SaveHistory, SaveModels, Callback, PlotMetricsCallback
 
 from unet_tiny_sum import ModelUNetTinySum
+from deeplabv3plus_xception import DeepLabv3_plus
 from loss import l2_loss, classification_loss, mIoUMetric, metterMetric, precisionMetric, recallMetric, accuracyMetric
 
 def getArgs():
@@ -47,7 +48,7 @@ def getArgs():
 	assert args.type in ("test_dataset", "train", "retrain", "test")
 	assert args.task in ("classification", "regression")
 	if not args.type in ("test_dataset", ):
-		assert args.model in ("unet_big_concatenate", "unet_tiny_sum", "unet_classic", "deeplabv3")
+		assert args.model in ("unet_big_concatenate", "unet_tiny_sum", "unet_classic", "deeplabv3plus")
 	if args.type in ("retrain", "test"):
 		args.weights_file = os.path.abspath(args.weights_file)
 	args.data_dims = args.data_dims.split(",")
@@ -72,7 +73,9 @@ class SchedulerCallback(Callback):
 
 def getResizer(args):
 	if args.model == "unet_classic":
-		resizer= {"rgb" : (572, 572, 3), "depth" : (388, 388)}
+		resizer = {"rgb" : (572, 572, 3), "depth" : (388, 388)}
+	elif args.model == "deeplabv3plus":
+		resizer = {"rgb" : (512, 512, 3), "hvn_gt_p1" : (512, 512, 1)}
 	else:
 		resizer = (240, 320)
 	return resizer
@@ -88,6 +91,9 @@ def getModel(args, reader):
 	elif args.model == "unet_classic":
 		assert args.task == "regression" and args.data_dims == ["rgb"] and args.label_dims == ["depth"]
 		model = ModelUNetClassic(dIn=dIn, dOut=dOut, upSampleType="conv_transposed")
+	elif args.model == "deeplabv3plus":
+		assert args.task == "classification" and args.data_dims == ["rgb"] and args.label_dims == ["hvn_gt_p1"]
+		model = DeepLabv3_plus(nInputChannels=3, n_classes=3, pretrained=False)
 	model = maybeCuda(model)
 	return model
 
