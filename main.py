@@ -45,11 +45,11 @@ def getArgs():
 	parser.add_argument("--test_save_results", default=0, type=int)
 
 	args = parser.parse_args()
-	assert args.type in ("test_dataset", "train", "retrain", "test")
+	assert args.type in ("test_dataset", "train", "retrain", "train_pretrained", "test")
 	assert args.task in ("classification", "regression")
 	if not args.type in ("test_dataset", ):
 		assert args.model in ("unet_big_concatenate", "unet_tiny_sum", "unet_classic", "deeplabv3plus")
-	if args.type in ("retrain", "test"):
+	if args.type in ("retrain", "test", "train_pretrained"):
 		args.weights_file = os.path.abspath(args.weights_file)
 	args.data_dims = args.data_dims.split(",")
 	args.label_dims = args.label_dims.split(",")
@@ -98,7 +98,7 @@ def getModel(args, reader):
 	return model
 
 def setOptimizer(args, model):
-	if not args.type in ("train", "retrain"):
+	if not args.type in ("train", "retrain", "train_pretrained"):
 		return
 
 	if args.optimizer == "SGD":
@@ -181,6 +181,20 @@ def main():
 		model.train()
 		model.train_generator(generator, stepsPerEpoch=steps, numEpochs=args.num_epochs, \
 			callbacks=None, validationGenerator=valGenerator, validationSteps=valSteps)
+
+	elif args.type == "train_pretrained":
+		changeDirectory(args.dir, expectExist=False)
+
+		callbacks = [SaveModels(type="all"), SaveHistory("history.txt", mode="write"), \
+			PlotMetricsCallback(["Loss"], ["min"]), SchedulerCallback(model.optimizer, args.factor, args.patience)]
+		callbacks[1].file.write(reader.summary())
+		callbacks[1].file.write(model.summary())
+
+		model.loadWeights(args.weights_file)
+		model.train()
+		model.train_generator(generator, stepsPerEpoch=steps, numEpochs=args.num_epochs, callbacks=callbacks, \
+			validationGenerator=valGenerator, validationSteps=valSteps)
+
 	elif args.type == "test":
 		from plotter import PlotCallback
 		if args.test_save_results:
