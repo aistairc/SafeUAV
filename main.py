@@ -73,9 +73,9 @@ class SchedulerCallback(Callback):
 
 def getResizer(args):
 	if args.model == "unet_classic":
-		resizer = {"rgb" : (572, 572, 3), "depth" : (388, 388)}
+		resizer = {"rgb" : (572, 572, 3), "depth" : (388, 388, 1), "hvn_gt_p1" : (388, 388, 1)}
 	elif args.model == "deeplabv3plus":
-		resizer = {"rgb" : (512, 512, 3), "hvn_gt_p1" : (512, 512, 1)}
+		resizer = {"rgb" : (512, 512, 3), "depth" : (512, 512, 1), "hvn_gt_p1" : (512, 512, 1)}
 	else:
 		resizer = (240, 320)
 	return resizer
@@ -89,11 +89,9 @@ def getModel(args, reader):
 	elif args.model == "unet_tiny_sum":
 		model = ModelUNetTinySum(dIn=dIn, dOut=dOut, numFilters=16)
 	elif args.model == "unet_classic":
-		assert args.task == "regression" and args.data_dims == ["rgb"] and args.label_dims == ["depth"]
 		model = ModelUNetClassic(dIn=dIn, dOut=dOut, upSampleType="conv_transposed")
 	elif args.model == "deeplabv3plus":
-		assert args.task == "classification" and args.data_dims == ["rgb"] and args.label_dims == ["hvn_gt_p1"]
-		model = DeepLabv3_plus(nInputChannels=3, n_classes=3, pretrained=False)
+		model = DeepLabv3_plus(nInputChannels=3, n_classes=dOut, pretrained=False)
 	model = maybeCuda(model)
 	return model
 
