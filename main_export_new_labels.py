@@ -84,6 +84,7 @@ def main():
 	print(reader.summary())
 
 	model = getModel(args, reader)
+	model.loadWeights(args.weights_file)
 	criterion = l2_loss if args.task == "regression" else classification_loss
 	model.setCriterion(criterion)
 	print(model.summary())
