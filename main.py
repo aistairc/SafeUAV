@@ -80,10 +80,7 @@ def getResizer(args):
 		resizer = (240, 320)
 	return resizer
 
-def getModel(args, reader):
-	dIn = reader.getNumDimensions(args.data_dims)
-	# For classification, we need to output probabilities for all 3 classes.
-	dOut = 3 if args.task == "classification" else reader.getNumDimensions(args.label_dims)
+def getModel(args, dIn, dOut):
 	if args.model == "unet_big_concatenate":
 		model = ModelUNetDilatedConv(dIn=dIn, dOut=dOut, numFilters=64, bottleneckMode="dilate2_serial_concatenate")
 	elif args.model == "unet_tiny_sum":
@@ -149,7 +146,11 @@ def main():
 		testDataset(reader, args)
 		sys.exit(0)
 
-	model = getModel(args, reader)
+	dIn = CitySimReader.getNumDimensions(args.data_dims, hvnTransform)
+	# For classification, we need to output probabilities for all 3 classes.
+	dOut = 3 if args.task == "classification" else CitySimReader.getNumDimensions(args.label_dims, hvnTransform)
+	model = getModel(args, dIn=dIn, dOut=dOut)
+
 	setOptimizer(args, model)
 	criterion = l2_loss if args.task == "regression" else classification_loss
 	model.setCriterion(criterion)

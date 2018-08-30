@@ -7,6 +7,7 @@ from neural_wrappers.readers import CitySimReader
 from argparse import ArgumentParser
 from neural_wrappers.callbacks import Callback
 from loss import l2_loss, classification_loss
+from main import SchedulerCallback
 
 def getArgs():
 	parser = ArgumentParser()
@@ -83,7 +84,10 @@ def main():
 	valSteps = reader.getNumIterations("validation", args.batch_size)
 	print(reader.summary())
 
-	model = getModel(args, reader)
+	dIn = CitySimReader.getNumDimensions(args.data_dims, hvnTransform)
+	# For classification, we need to output probabilities for all 3 classes.
+	dOut = 3 if args.task == "classification" else CitySimReader.getNumDimensions(args.label_dims, hvnTransform)
+	model = getModel(args, dIn=dIn, dOut=dOut)
 	model.loadWeights(args.weights_file)
 	criterion = l2_loss if args.task == "regression" else classification_loss
 	model.setCriterion(criterion)
