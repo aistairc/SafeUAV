@@ -61,7 +61,7 @@ def make_frame(t, model, video, fps, inputShape, args):
 	trResult = model.forward(trImage)
 	npResult = trResult.detach().cpu().numpy()[0]
 	npResult = minMaxNormalizeFrame(npResult)
-	npResult = resize(npResult, height=outH, width=outW, interpolation=Interpolation.CUBIC)
+	# npResult = resize(npResult, height=outH, width=outW, interpolation=Interpolation.CUBIC)
 
 	if args.label_dims == ["depth"]:
 		frame = hot(npResult)[..., 0 : 3]
@@ -70,7 +70,7 @@ def make_frame(t, model, video, fps, inputShape, args):
 		hvnFrame = np.argmax(npResult, axis=-1)
 		frame = np.zeros((*hvnFrame.shape, 3), dtype=np.float32)
 		frame[np.where(hvnFrame == 0)] = (255, 0, 0)
-		frame[np.where(hvnFrame == 1)] = (0, 255, 0)
+		frame[np.where(hvnFrame == 1)] = (255, 255, 0)
 		frame[np.where(hvnFrame == 2)] = (0, 0, 255)
 
 	# print(image.shape)
