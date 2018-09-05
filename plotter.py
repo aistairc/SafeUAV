@@ -5,13 +5,15 @@ from Mihlib import plot_image, show_plots, figure_set_size, save_figure, npGetIn
 def hvnPlotter(x, hvnTransform):
 	hvn = np.zeros((*x.shape[0 : 2], 3), dtype=np.uint8)
 	if hvnTransform in ("identity_long", "identity"):
-		hvn[np.where(x == 0)] = (255, 0, 0)
-		hvn[np.where(x == 1)] = (255, 255, 0)
+		# H, V, N
+		hvn[np.where(x == 0)] = (0, 255, 0)
+		hvn[np.where(x == 1)] = (255, 0, 0)
 		hvn[np.where(x == 2)] = (0, 0, 255)
 	elif hvnTransform == "hvn_two_dims":
+		# N, H, V
 		hvn[..., 0 : 3] = (0, 0, 255)
-		hvn[np.where(x[..., 0] == 1)] = (255, 0, 0)
-		hvn[np.where(x[..., 1] == 1)] = (255, 255, 0)
+		hvn[np.where(x[..., 0] == 1)] = (0, 255, 0)
+		hvn[np.where(x[..., 1] == 1)] = (255, 0, 0)
 	return hvn
 
 def plotter(data, dims, hvnTransform, startingIndex, totalItems):
@@ -19,7 +21,7 @@ def plotter(data, dims, hvnTransform, startingIndex, totalItems):
 	for i, dim in enumerate(dims):
 		if dim == "rgb":
 			rgb = data[..., j : j + 3]
-			print(npGetInfo(rgb))
+			# print(npGetInfo(rgb))
 			plot_image(rgb, new_figure=(startingIndex==1 and i==0), show_axis=False, \
 				title="RGB", axis=(1, totalItems, startingIndex + i))
 			j += 3
@@ -33,7 +35,7 @@ def plotter(data, dims, hvnTransform, startingIndex, totalItems):
 			j += 1
 		elif dim == "depth":
 			depth = data[..., j]
-			print(npGetInfo(depth))
+			# print(npGetInfo(depth))
 			plot_image(depth, cmap="hot", new_figure=(startingIndex==1 and i==0), show_axis=False, \
 				title="Depth", axis=(1, totalItems, startingIndex + i))
 			j += 1
@@ -73,8 +75,10 @@ class PlotCallback(Callback):
 		data = kwargs["data"]
 		labels = kwargs["labels"]
 		results = kwargs["results"]
-		loss = kwargs["loss"]
+		metrics = kwargs["metrics"]
+		loss = metrics["Loss"]
 
+		print(metrics)
 		for i in range(len(results)):
 			self.doPlot(data[i], labels[i], results[i])
 			figure_set_size((20, 8))

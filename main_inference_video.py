@@ -69,14 +69,10 @@ def make_frame(t, model, video, fps, inputShape, args):
 	else:
 		hvnFrame = np.argmax(npResult, axis=-1)
 		frame = np.zeros((*hvnFrame.shape, 3), dtype=np.float32)
-		frame[np.where(hvnFrame == 0)] = (255, 0, 0)
-		frame[np.where(hvnFrame == 1)] = (255, 255, 0)
+		frame[np.where(hvnFrame == 0)] = (0, 255, 0)
+		frame[np.where(hvnFrame == 1)] = (255, 0, 0)
 		frame[np.where(hvnFrame == 2)] = (0, 0, 255)
 
-	# print(image.shape)
-	# plot_image(image[0])
-	# plot_image(frame)
-	# show_plots()
 	finalFrame = minMaxNormalizeFrame(frame)
 	return finalFrame
 
@@ -96,7 +92,7 @@ def main():
 	inH, inW = 240, 320
 	frameCallback = partial(make_frame, model=model, video=video, fps=fps, inputShape=(inH, inW), args=args)
 	clip = mpy.VideoClip(frameCallback, duration=duration)
-	clip.write_videofile(args.out_video, fps=fps, verbose=False, progress_bar=True)
+	clip.write_videofile(args.out_video, fps=fps, codec="mpeg4", verbose=False, progress_bar=True)
 
 if __name__ == "__main__":
 	main()
