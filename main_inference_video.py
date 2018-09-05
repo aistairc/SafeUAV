@@ -92,7 +92,9 @@ def main():
 	inH, inW = 240, 320
 	frameCallback = partial(make_frame, model=model, video=video, fps=fps, inputShape=(inH, inW), args=args)
 	clip = mpy.VideoClip(frameCallback, duration=duration)
-	clip.write_videofile(args.out_video, fps=fps, codec="mpeg4", verbose=False, progress_bar=True)
+	ffmpeg_params = ["-crf", "0", "-preset", "veryslow", "-tune", "film"]
+	clip.write_videofile(args.out_video, fps=fps, codec="mpeg4", verbose=False, \
+		progress_bar=True, ffmpeg_params=ffmpeg_params)
 
 if __name__ == "__main__":
 	main()
