@@ -1,9 +1,12 @@
 matplotlib
-torch==0.4.1
-torchvision==0.2.1
+#torch==0.4.1
+torch==1.7.0
+#torchvision==0.2.1
+torchvision==0.8.0
 prefetch_generator
-scipy==1.2.0
-h5py
+#scipy==1.2.0
+scipy
+#h5py
 cffi
 joblib
 moviepy

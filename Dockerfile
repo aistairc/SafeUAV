@@ -1,4 +1,5 @@
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+#FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:11.4.0-devel-ubuntu18.04
 
 WORKDIR /SafeUAV
 
@@ -14,7 +15,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y upgrade && \
     apt-get -y install tzdata
 
-RUN apt-get -y install python3-numpy python3-opencv python3-pip emacs git cmake build-essential libjpeg-dev libpng-dev
+#RUN apt-get -y install python3-numpy python3-opencv python3-pip emacs git cmake build-essential libjpeg-dev libpng-dev
+RUN apt-get -y install python3-numpy python3-opencv python3-pip python3-h5py emacs git cmake build-essential libjpeg-dev libpng-dev ffmpeg
 RUN pip3 install --upgrade pip
 RUN pip3 install -r requirements.txt
 

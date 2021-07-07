@@ -1,0 +1,4 @@
+main_inference_video.py, L96
+- clip.write_videofile(args.out_video, fps=fps, verbose=False, \
+-       progress_bar=True, ffmpeg_params=ffmpeg_params)
++ clip.write_videofile(args.out_video, fps=fps, verbose=False, ffmpeg_params=ffmpeg_params)
