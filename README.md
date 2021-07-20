@@ -54,3 +54,12 @@ python main_inference_video.py classification in_video.mp4 out_video.mp4 --model
 ```sh
 python main_inference_video.py regression in_video.mp4 out_video.mp4 --model=$model --weights_file=/path/to/checkpoint.pkl
 ```
+
+## Installation for Jetson
+
+    $ sudo apt update && sudo apt -y upgrade
+    $ sudo apt -y install < packages.txt
+
+    $ pip3 install --upgrade pip
+    $ pip3 install -r requirements.txt
+    
