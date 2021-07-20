@@ -1,0 +1,7 @@
+matplotlib
+prefetch_generator
+scipy
+cffi
+joblib
+moviepy
+pims
