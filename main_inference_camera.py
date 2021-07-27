@@ -26,46 +26,74 @@ def get_opts():
     p = argparse.ArgumentParser()
     p.add_argument('--dstdir', type=str, default='results')
     p.add_argument('--task', type=str, default='classification')
-    p.add_argument('--devid', type=int, default=0)
+    p.add_argument('--weights_file', type=str, default=None)
+    p.add_argument('--cam_id', type=int, default=0)
     p.add_argument('--cam_width', type=int, default=320)
     p.add_argument('--cam_height', type=int, default=240)
     p.add_argument('--cam_fps', type=int, default=30)
+    p.add_argument('--cam_format', type=str, default='YUYV')
     p.add_argument('--num_frames', type=int, default=100)
     p.add_argument('--no_save', action='store_true')
     return p.parse_args()
                                 
 
-if __name__ == '__main__':
-    opt = get_opts()
-    dstdir = os.path.join(opt.dstdir, datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
-    if not os.path.exists(dstdir) and not opt.no_save:
-        os.makedirs(dstdir)
-        
-    #cap = cv2.VideoCapture(0)
-    cap = cv2.VideoCapture(opt.devid, cv2.CAP_V4L)
-    assert cap.isOpened(), 'camera not found'
-
-    # set camera params
+def set_params(opt):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, opt.cam_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, opt.cam_height)
+    cap.set(cv2.CAP_PROP_FPS, opt.cam_fps)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*opt.cam_format))
+
+
+def show_params(opt):
+    print(f'------------------- parameters -------------------')
+    print(f'         task: {opt.task}')
+    print(f' weights file: {opt.weights_file}')
+    if not opt.no_save:
+        print(f'  destination: {opt.dstdir}')
+    print(f'       device: {opt.cam_id}')
+    print(f'         size: {cap.get(cv2.CAP_PROP_FRAME_WIDTH):.0f}x{cap.get(cv2.CAP_PROP_FRAME_HEIGHT):.0f}')
+    print(f'          fps: {cap.get(cv2.CAP_PROP_FPS):.0f}')
+    print(f'       format: {int(cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, "little").decode("utf-8")}')
+    print(f'-'*50)
+
+    
+if __name__ == '__main__':
+    opt = get_opts()
+    
+    opt.dstdir = os.path.join(opt.dstdir, datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+    if not os.path.exists(opt.dstdir) and not opt.no_save:
+        os.makedirs(opt.dstdir)
+
+    if opt.task == 'classification':
+        dIn, dOut = 3, 3
+    elif opt.task == 'regression':
+        dIn, dOut = 3, 1
+    else:
+        assert False, f'invalid task: {opt.task}'
+
+    if opt.weights_file is None:
+        if opt.task == 'classification':
+            opt.weigths_file = 'weights/small-hvo.pkl'
+        elif opt.task == 'regression':
+            opt.weights_file = 'weights/small-depth.pkl'
+        else:
+            assert False, f'invalid task: {opt.task}'
+        
+    #cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(opt.cam_id, cv2.CAP_V4L)
+    assert cap.isOpened(), 'camera not found'
+
+    set_params(opt)
+    show_params(opt)
 
     # load model
-    model = ModelUNetTinySum(dIn=3, dOut=3, numFilters=16)
+    model = ModelUNetTinySum(dIn=dIn, dOut=dOut, numFilters=16)
     model = maybeCuda(model)
-
-    print(f'------------------- parameters -------------------')
-    print(f'   task: {opt.task}')
-    if not opt.no_save:
-        print(f' dstdir: {os.path.abspath(dstdir)}')
-    print(f' device: {opt.devid}')
-    print(f'  width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH):.0f}')
-    print(f' height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT):.0f}')
-    print(f'    fps: {cap.get(cv2.CAP_PROP_FPS):.0f}')
-    print(f'-'*50)
+    model.loadWeights(opt.weights_file)
 
     i = 0
     t_begin = t = time.time()
-    fps_list = []
+    fps_list, t_list = [], []
     while True:
         try:
             _, frame = cap.read()
@@ -96,12 +124,14 @@ if __name__ == '__main__':
             res = minMaxNormalizeFrame(tmp)
 
             if not opt.no_save:
-                dst = os.path.join(dstdir, f'{i:05d}.jpg')
+                dst = os.path.join(opt.dstdir, f'{i:05d}.png')
                 cv2.imwrite(dst, cv2.hconcat([frame, res]))
 
-            fps = 1 / (time.time() - t)
+            t_ = time.time() - t
+            fps = 1 / t_
             t = time.time()
             fps_list.append(fps)
+            t_list.append(t_)
 
             # progress bar
             pbar = '=' * (30 * (i+1) // opt.num_frames)
@@ -110,13 +140,16 @@ if __name__ == '__main__':
             up = time.strftime('%M:%S', time.gmtime(t_up))
             eta = time.strftime('%M:%S', time.gmtime(t_eta))
 
-            if opt.num_frames < 0:
-                print(f'frame: {i+1}, uptime: {up}, fps: {fps:.1f}', end='\r')
-            else:
-                print(f'{i+1:4d}/{opt.num_frames} [{pbar:30s}] {(i+1)/opt.num_frames:4.0%} [{up}<{eta}, {fps:.1f} fps]', end='\r')
-
-            if -1 < opt.num_frames-2 < i:
+            if -1 < opt.num_frames-1 < i:
                 break
+
+            if opt.num_frames < 0:
+                print(f'frame: {i+1}, uptime: {up}, {fps:.1f} fps, {1e3*t_:.0f} ms', end='\r')
+            else:
+                print(f'{i+1:4d}/{opt.num_frames} [{pbar:30s}] {(i+1)/opt.num_frames:4.0%} [{up}<{eta}, {fps:.1f} fps, {1e3*t_:.0f} ms] ', end='\r')
+
+            # if -1 < opt.num_frames-2 < i:
+            #     break
 
             i += 1
 
@@ -126,9 +159,13 @@ if __name__ == '__main__':
     cap.release()
     cv2.destroyAllWindows()
 
-    print()
-    print(f'-------------------- results ---------------------')
-    print(f' # of frames: {i+1}')
-    print(f'         fps: {np.mean(fps_list):.2f}+-{np.std(fps_list, ddof=1):.2f}')
-    print(f'-'*50)
+    if fps_list and t_list:
+        fps_list.pop(0)
+        t_list.pop(0)
+        print()
+        print(f'-------------------- results ---------------------')
+        print(f' # of frames: {len(t_list)}')
+        print(f'         fps: {np.mean(fps_list):.3f}+-{np.std(fps_list, ddof=1):.4f}')
+        print(f'      t_iter: {np.mean(t_list)*1e3:.0f}+-{np.std(t_list, ddof=1)*1e3:.1f} ms')
+        print(f'-'*50)
     
