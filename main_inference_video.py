@@ -1,4 +1,6 @@
 import sys
+sys.path.append('../neural-wrappers')
+
 import os
 import moviepy.editor as mpy
 import pims
@@ -8,7 +10,7 @@ import cv2
 from neural_wrappers.utilities import minMaxNormalizeData
 from neural_wrappers.readers import CitySimReader
 from neural_wrappers.pytorch import maybeCuda
-from Mihlib import show_plots, plot_image
+# from Mihlib import show_plots, plot_image
 from functools import partial
 # from lycon import resize, Interpolation
 from matplotlib.cm import hot

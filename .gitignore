@@ -2,5 +2,7 @@
 *.mp4
 __pycache__
 /.trash/
+/.test/
 /results/
 /weights/
+/videos/
