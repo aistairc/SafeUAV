@@ -30,3 +30,4 @@ RUN git clone https://github.com/ishitsuka-hikaru/SafeUAV.git
 #     git checkout 3dcc404b08f0e356904d1a1dd16382c3ae4aa752 && \
 #     cd $WORKDIR
 RUN git clone https://github.com/ishitsuka-hikaru/neural-wrappers.git
+RUN cd $WORKDIR/SafeUAV
