@@ -24,7 +24,7 @@ def minMaxNormalizeFrame(frame):
 
 def get_opts():
     p = argparse.ArgumentParser()
-    p.add_argument('--dstdir', type=str, default='results')
+    p.add_argument('--dstdir', type=str, default='data/results')
     p.add_argument('--task', type=str, default='classification')
     p.add_argument('--weights_file', type=str, default=None)
     p.add_argument('--devid', type=int, default=0)
@@ -78,9 +78,9 @@ if __name__ == '__main__':
 
     if opt.weights_file is None:
         if opt.task == 'classification':
-            opt.weights_file = 'weights/small-hvo.pkl'
+            opt.weights_file = 'data/weights/small-hvo.pkl'
         elif opt.task == 'regression':
-            opt.weights_file = 'weights/small-depth.pkl'
+            opt.weights_file = 'data/weights/small-depth.pkl'
         else:
             assert False, f'invalid task: {opt.task}'
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     cmap = eval(f'cm.{opt.cmap}')
         
     # video capture
-    cap = cv2.VideoCapture(opt.devid, cv2.CAP_V4L)
+    cap = cv2.VideoCapture(opt.devid)
     assert cap.isOpened(), 'camera not found'
 
     # params

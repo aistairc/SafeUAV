@@ -55,11 +55,31 @@ python main_inference_video.py classification in_video.mp4 out_video.mp4 --model
 python main_inference_video.py regression in_video.mp4 out_video.mp4 --model=$model --weights_file=/path/to/checkpoint.pkl
 ```
 
-## Installation for Jetson
+# Installation for Jetson
 
     $ sudo apt update && sudo apt -y upgrade
     $ sudo apt -y install < packages.txt
 
     $ pip3 install --upgrade pip
     $ pip3 install -r requirements.txt
-    
+
+    $ cd ..
+    $ git clone https://gitlab.com/mihaicristianpirvu/neural-wrappers.git
+    $ cd neural-wrappers
+    $ git checkout 3dcc404b08f0e356904d1a1dd16382c3ae4aa752
+
+
+## Use Docker Image
+Docker version >= 20.10.
+
+You can download pre-train model, datasets and Docker image [here][safeuav/data].
+
+
+    $ docker build -t <repository> docker/
+
+Run
+
+    $ docker run --privileged --gpus all --it -v <data>:/SafeUAV/SafeUAV/data <repository>
+
+
+[safeuav/data]: <https://aistmail-my.sharepoint.com/:f:/r/personal/ishitsuka_hikaru_aist_go_jp/Documents/aipj/data/SafeUAV?csf=1&web=1&e=AdgeZI>
